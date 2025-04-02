@@ -1,0 +1,15 @@
+# Ignore virtual environment directories
+venv/
+*venv*/
+.venv/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+api/data/blocklist.json
+
+.DS_Store
+webwatch_persist.db
+webwatch.db
