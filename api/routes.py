@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
-from models.blocklist import get_blocklist, add_to_blocklist, remove_from_blocklist
-from models.visits import get_visits, get_visits_for_report, add_visit
+from models.blocklist import get_blocklist, add_to_blocklist, remove_from_blocklist, clear_blocklist
+from models.visits import get_visits, get_visits_for_report, add_visit, clear_visits
 
 # Create blueprint with url_prefix
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -9,6 +9,20 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 @api_bp.route('/')
 def index():
     return {"status": "WebWatch API is running"}
+
+# Reset route
+@api_bp.route('/reset', methods=['GET'])
+def reset():
+    try:
+        # Clear the blocklist
+        clear_blocklist()
+        
+        # Clear the visits
+        clear_visits()
+        
+        return jsonify({"success": True, "message": "Database and blocklist reset successfully."}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to reset: {str(e)}"}), 500
 
 # Blocklist routes
 @api_bp.route('/blocklist', methods=['GET'])

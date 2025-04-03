@@ -1,11 +1,16 @@
 import json
 import os
 from datetime import datetime
+import sqlite3
 
 # Path to the data directory and blocklist file
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
 os.makedirs(DATA_DIR, exist_ok=True)
 BLOCKLIST_FILE = os.path.join(DATA_DIR, 'blocklist.json')
+
+# Assuming you have a connection to your database
+conn = sqlite3.connect('visits.db', check_same_thread=False)
+cursor = conn.cursor()
 
 def get_blocklist():
     """Get all entries from the blocklist file"""
@@ -73,4 +78,8 @@ def remove_from_blocklist(index):
     with open(BLOCKLIST_FILE, 'w') as f:
         json.dump(blocklist, f, indent=2)
     
-    return removed 
+    return removed
+
+def clear_blocklist():
+    with open(BLOCKLIST_FILE, 'w') as file:
+        json.dump([], file) 

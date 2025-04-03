@@ -33,3 +33,7 @@ def add_visit(url, content, title, timestamp):
         return {'id': cursor.lastrowid, 'url': url, 'content': content, 'title': title, 'timestamp': timestamp}
     except sqlite3.IntegrityError:
         return {'error': 'URL already exists in the database'}
+    
+def clear_visits():
+    cursor.execute('DELETE FROM visits')
+    conn.commit()
