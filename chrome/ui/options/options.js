@@ -1,62 +1,49 @@
 document.addEventListener('DOMContentLoaded', function() {
-  // Set up tabs
-  setupTabs();
-  
-  // Load settings
-  loadSettings();
-  
-  // Load blocklist
-  loadBlocklist();
-  
-  // Set up event listeners
-  document.getElementById('save-button').addEventListener('click', saveSettings);
-  document.getElementById('reset-button').addEventListener('click', resetSettings);
-  document.getElementById('add-block-button').addEventListener('click', addBlockedUrl);
-  document.getElementById('clear-history').addEventListener('click', clearHistory);
-  
-  // Set up history filter buttons
-  document.getElementById('filter-all').addEventListener('click', () => filterHistory('all'));
-  document.getElementById('filter-blocked').addEventListener('click', () => filterHistory('blocked'));
-  document.getElementById('filter-allowed').addEventListener('click', () => filterHistory('allowed'));
-  
-  // Set up history search
-  document.getElementById('history-search').addEventListener('input', debounce(searchHistory, 300));
-  
-  // Set up server URL change listener
-  document.getElementById('server-url').addEventListener('change', function() {
-    // When server URL changes, reload the blocklist
-    loadBlocklist();
-  });
-});
-
-// Set up tabs
-function setupTabs() {
   const tabs = document.querySelectorAll('.tab');
   const tabContents = document.querySelectorAll('.tab-content');
-  
+
   tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      // Remove active class from all tabs and contents
+    tab.addEventListener('click', function() {
       tabs.forEach(t => t.classList.remove('active'));
-      tabContents.forEach(c => c.classList.remove('active'));
-      
-      // Add active class to clicked tab and corresponding content
-      tab.classList.add('active');
-      const tabId = tab.getAttribute('data-tab');
-      document.getElementById(tabId).classList.add('active');
-      
-      // If switching to blocklist tab, refresh the blocklist
-      if (tabId === 'blocklist') {
-        loadBlocklist();
-      }
-      
-      // If switching to history tab, load the history
-      if (tabId === 'history') {
-        loadHistory();
-      }
+      tabContents.forEach(tc => tc.classList.remove('active'));
+
+      this.classList.add('active');
+      document.getElementById(this.dataset.tab).classList.add('active');
     });
   });
+
+  // Load initial data
+  loadHistory();
+  loadBlocklist();
+});
+
+function loadHistory() {
+  // Implement history loading logic
 }
+
+function loadBlocklist() {
+  // Implement blocklist loading logic
+}
+
+// Set up event listeners
+document.getElementById('save-button').addEventListener('click', saveSettings);
+document.getElementById('reset-button').addEventListener('click', resetSettings);
+document.getElementById('add-block-button').addEventListener('click', addBlockedUrl);
+document.getElementById('clear-history').addEventListener('click', clearHistory);
+
+// Set up history filter buttons
+document.getElementById('filter-all').addEventListener('click', () => filterHistory('all'));
+document.getElementById('filter-blocked').addEventListener('click', () => filterHistory('blocked'));
+document.getElementById('filter-allowed').addEventListener('click', () => filterHistory('allowed'));
+
+// Set up history search
+document.getElementById('history-search').addEventListener('input', debounce(searchHistory, 300));
+
+// Set up server URL change listener
+document.getElementById('server-url').addEventListener('change', function() {
+  // When server URL changes, reload the blocklist
+  loadBlocklist();
+});
 
 // Get the server URL from settings
 function getServerUrl() {
