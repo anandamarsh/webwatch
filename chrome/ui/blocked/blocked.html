@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Site Blocked - WebWatch</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f8f9fa;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    
+    .container {
+      max-width: 600px;
+      background-color: white;
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    
+    .icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 20px;
+      background-color: #f44336;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .icon svg {
+      width: 40px;
+      height: 40px;
+      fill: white;
+    }
+    
+    h1 {
+      color: #f44336;
+      margin-top: 0;
+    }
+    
+    .url {
+      margin: 20px 0;
+      word-break: break-all;
+      font-family: monospace;
+    }
+    
+    .reason {
+      background-color: #fff3cd;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 20px 0;
+      border-left: 4px solid #ffc107;
+      text-align: left;
+    }
+    
+    .button {
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 20px;
+    }
+    
+    .button:hover {
+      background-color: #3367d6;
+    }
+    
+    .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .button-disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .button-disabled:hover {
+      background-color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/>
+      </svg>
+    </div>
+    
+    <h1>Access Blocked</h1>
+    <p>WebWatch has blocked access to this website.</p>
+    
+    <div class="url" id="blocked-url"></div>
+    
+    <div class="reason" id="block-reason">
+      This site contains content that violates your browsing policy.
+    </div>
+    
+    <div class="button-group" style="display: none;">
+      <!-- No buttons here -->
+    </div>
+  </div>
+  
+  <script>
+    // Immediately run the script to get URL parameters
+    (function() {
+      // Get the URL and reason from the query string
+      const queryString = window.location.search;
+      console.log("Query string:", queryString);
+      
+      // Parse the URL parameters manually to avoid any issues
+      function getParameterByName(name) {
+        name = name.replace(/[\[\]]/g, '\\$&');
+        var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+            results = regex.exec(queryString);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, ' '));
+      }
+      
+      // Get the blocked URL and reason
+      const blockedUrl = getParameterByName('url');
+      const reason = getParameterByName('reason');
+      
+      console.log('Blocked URL:', blockedUrl);
+      console.log('Reason:', reason);
+      
+      // Always show the blocked URL - if not in parameters, get from referrer or show current URL
+      const urlToShow = blockedUrl || document.referrer || window.location.href.split('?')[0];
+      document.getElementById('blocked-url').textContent = urlToShow;
+      
+      // Set the page title to include the blocked URL
+      document.title = "Site Blocked: " + urlToShow;
+      
+      // Update reason if provided
+      if (reason) {
+        document.getElementById('block-reason').textContent = reason;
+      }
+      
+      // Hide the button group entirely
+      const buttonGroup = document.querySelector('.button-group');
+      buttonGroup.style.display = 'none';
+    })();
+    
+    // Go back function
+    function goBack() {
+      window.history.back();
+    }
+  </script>
+</body>
+</html> 

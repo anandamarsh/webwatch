@@ -1,0 +1,336 @@
+/* History tab styles */
+.history-list {
+  max-height: 500px;
+  overflow-y: auto;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.history-item {
+  display: flex;
+  border-bottom: 1px solid #f1f3f4;
+  transition: background-color 0.2s;
+  align-items: center;
+  padding: 0;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-item:hover {
+  background-color: #f8f9fa;
+}
+
+.history-toggle {
+  margin-right: 15px;
+  margin-left: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toggle-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #5f6368; /* Neutral gray color like the delete icon */
+}
+
+.toggle-button:hover {
+  color: #4285f4; /* Google blue on hover */
+}
+
+.toggle-button svg {
+  fill: currentColor;
+}
+
+.icon-symbol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.toggle-button:hover .icon-symbol {
+  transform: scale(1.2); /* Slight scale effect on hover */
+}
+
+.toggle-button.blocked {
+  color: #ea4335; /* Google red for blocked */
+}
+
+.toggle-button.allowed {
+  color: #34a853; /* Google green for allowed */
+}
+
+.history-icon {
+  margin-right: 15px;
+  flex: 0 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.history-icon svg {
+  width: 24px;
+  height: 24px;
+  transition: fill 0.2s;
+}
+
+.history-icon.allowed svg {
+  fill: #34a853;
+}
+
+.history-icon.blocked svg {
+  fill: #ea4335;
+}
+
+.history-icon:hover.allowed svg {
+  fill: #ea4335;
+}
+
+.history-icon:hover.blocked svg {
+  fill: #34a853;
+}
+
+.history-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.history-title {
+  font-weight: 500;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-url {
+  color: #5f6368;
+  font-size: 13px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: monospace;
+}
+
+.history-time {
+  color: #80868b;
+  font-size: 12px;
+}
+
+.history-filters {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  align-items: center;
+}
+
+.history-search {
+  position: relative;
+  flex: 1;
+  max-width: 300px;
+}
+
+.history-search input {
+  padding-left: 36px;
+  width: 100%;
+}
+
+.history-search svg {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  fill: #5f6368;
+}
+
+.empty-message {
+  padding: 20px;
+  text-align: center;
+  color: #80868b;
+}
+
+.loading {
+  padding: 20px;
+  text-align: center;
+  color: #80868b;
+}
+
+/* Animation for loading */
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+.loading {
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+.blocklist-action {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  color: #5f6368;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+}
+
+.blocklist-action:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.blocklist-action.delete:hover {
+  color: #ea4335;
+}
+
+.blocklist-action svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Blocklist styles */
+.blocklist {
+  margin-bottom: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+}
+
+.blocklist-item {
+  padding: 10px 15px;
+  border-bottom: 1px solid #dadce0;
+  display: flex;
+  align-items: center;
+}
+
+.blocklist-item:last-child {
+  border-bottom: none;
+}
+
+.blocklist-url {
+  flex: 1;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 15px;
+}
+
+.blocklist-reason {
+  flex: 1;
+  font-size: 12px;
+  color: #5f6368;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 15px;
+}
+
+.blocklist-actions {
+  width: 40px;
+  display: flex;
+  justify-content: center;
+}
+
+/* History tree structure */
+.history-domain {
+  border-bottom: 1px solid #f1f3f4;
+  transition: background-color 0.2s;
+}
+
+.history-domain-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  cursor: pointer;
+  margin-left: 10px; /* Add left margin for the twistie button */
+}
+
+.history-domain-header:hover {
+  background-color: #f8f9fa;
+}
+
+.history-domain-name {
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-domain-count {
+  margin-left: 10px;
+  margin-right: 15px;
+  color: #5f6368;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.history-domain-urls {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.history-domain.expanded .history-domain-urls {
+  max-height: 1000px; /* Arbitrary large value */
+  transition: max-height 0.5s ease-in;
+}
+
+.history-item {
+  display: flex;
+  border-bottom: 1px solid #f1f3f4;
+  transition: background-color 0.2s;
+  align-items: center;
+  padding: 0;
+  margin-left: 20px; /* Indent URLs under domain */
+}
+
+.expand-icon {
+  margin-right: 10px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s;
+}
+
+.history-domain.expanded .expand-icon {
+  transform: rotate(90deg);
+}
+
+.history-domain.blocked .expand-icon {
+  display: none; /* Hide expand icon for blocked domains */
+}
+
+.history-domain.blocked .history-domain-urls {
+  display: none; /* Hide URLs for blocked domains */
+} 
