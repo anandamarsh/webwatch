@@ -29,9 +29,7 @@ function initialize() {
       console.log('Blocking URL:', details.url, 'Reason:', result.reason);
       
       // Cancel the navigation and redirect to blocked page
-      chrome.tabs.update(details.tabId, {
-        url: chrome.runtime.getURL('blocked.html')
-      });
+      redirectToBlockedPage(details.tabId, details.url, result.reason);
     }
   });
   
@@ -52,3 +50,11 @@ function initialize() {
 
 // Start the extension
 initialize();
+
+function redirectToBlockedPage(tabId, blockedUrl, reason) {
+  const redirectUrl = chrome.runtime.getURL('ui/blocked/blocked.html') +
+    '?url=' + encodeURIComponent(blockedUrl) +
+    '&reason=' + encodeURIComponent(reason || 'This site has been blocked');
+
+  chrome.tabs.update(tabId, { url: redirectUrl });
+}
