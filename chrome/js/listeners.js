@@ -35,7 +35,7 @@ chrome.tabs.onUpdated.addListener(async function(tabId, changeInfo, tab) {
         }
         
         // Create the redirect URL with properly encoded parameters
-        const redirectUrl = chrome.runtime.getURL('blocked.html') + 
+        const redirectUrl = chrome.runtime.getURL('ui/blocked/blocked.html') + 
           '?url=' + encodeURIComponent(tab.url) + 
           '&reason=' + encodeURIComponent(blockCheck.reason || 'This site has been blocked') +
           (previousUrl ? '&referrer=' + encodeURIComponent(previousUrl) : '');
@@ -78,7 +78,7 @@ chrome.tabs.onUpdated.addListener(async function(tabId, changeInfo, tab) {
         console.log('Blocked navigation to:', details.url, 'Reason:', checkResult.reason);
         
         // Create the redirect URL with properly encoded parameters
-        const redirectUrl = chrome.runtime.getURL('blocked.html') + 
+        const redirectUrl = chrome.runtime.getURL('ui/blocked/blocked.html') + 
           '?url=' + encodeURIComponent(details.url) + 
           '&reason=' + encodeURIComponent(checkResult.reason || 'This site has been blocked');
         

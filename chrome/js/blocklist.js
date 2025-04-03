@@ -23,7 +23,7 @@ function isMonitoringEnabled() {
       
       console.log('Fetching blocklist from:', url);
       
-      const response = await fetch(`${url}/blocklist`);
+      const response = await fetch(`${url}/api/blocklist`);
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}`);
       }

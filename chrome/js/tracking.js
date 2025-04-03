@@ -136,7 +136,7 @@ function shouldTrackUrl(url) {
     console.log('Tracking page visit:', visitData.url);
     
     // Send to server
-    fetch(`${serverUrl}/visits`, {
+    fetch(`${serverUrl}/api/visits`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

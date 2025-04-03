@@ -13,3 +13,4 @@ api/data/blocklist.json
 .DS_Store
 webwatch_persist.db
 webwatch.db
+api/visits.db

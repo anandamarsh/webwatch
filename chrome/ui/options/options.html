@@ -19,6 +19,8 @@
       border-radius: 8px;
       padding: 20px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      height: 90vh; /* Full viewport height */
+  overflow-y: auto; 
     }
     
     h1 {
@@ -259,10 +261,10 @@
     /* History styles */
     .history-list {
       margin-bottom: 20px;
-      max-height: 400px;
       overflow-y: auto;
       border: 1px solid #dadce0;
       border-radius: 4px;
+      max-height: 75vh;
     }
     
     .history-item {
@@ -410,58 +412,18 @@
     <h1>WebWatch Settings</h1>
     
     <div class="tabs">
-      <div class="tab active" data-tab="general">General</div>
-      <div class="tab" data-tab="history">History</div>
+      <div class="tab active" data-tab="history">History</div>
       <div class="tab" data-tab="blocklist">Blocklist</div>
-      <div class="tab" data-tab="about">About</div>
     </div>
     
-    <div id="general" class="tab-content active">
+    <div id="history" class="tab-content active">
       <div class="section">
-        <div class="section-title">Connection Settings</div>
-        <div class="form-group">
-          <label for="server-url">Server URL</label>
-          <input type="text" id="server-url" placeholder="http://localhost:1978">
-        </div>
-      </div>
-      
-      <div class="section">
-        <div class="section-title">Tracking Options</div>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="track-incognito">
-          <label for="track-incognito">Track incognito browsing</label>
-        </div>
-        <div class="form-group checkbox-group">
-          <input type="checkbox" id="track-local" checked>
-          <label for="track-local">Track localhost URLs</label>
-        </div>
-      </div>
-    </div>
-    
-    <div id="history" class="tab-content">
-      <div class="section">
-        <div class="section-title">Browsing History</div>
-        
-        <div class="history-filters">
-          <div class="history-search">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-            </svg>
-            <input type="text" id="history-search" placeholder="Search history...">
-          </div>
-          
-          <div class="history-filter-buttons">
-            <button id="filter-all" class="filter-button active">All</button>
-            <button id="filter-blocked" class="filter-button">Blocked</button>
-            <button id="filter-allowed" class="filter-button">Allowed</button>
-          </div>
-        </div>
+
         
         <div id="history-container" class="history-list">
           <div class="loading">Loading browsing history...</div>
         </div>
         
-        <button id="clear-history" class="button button-danger clear-history">Clear History</button>
       </div>
     </div>
     
@@ -496,22 +458,9 @@
       </div>
     </div>
     
-    <div id="about" class="tab-content">
-      <div class="section">
-        <div class="section-title">About WebWatch</div>
-        <p>WebWatch is a browser activity monitoring tool that helps you track and analyze your browsing habits.</p>
-        <p>Version: 1.0.0</p>
-        <p>Created by: Amarsh Anand</p>
-      </div>
-    </div>
-    
     <div id="status-message" style="display: none;"></div>
     
-    <div class="button-group">
-      <button id="reset-button" class="button button-secondary">Reset to Defaults</button>
-      <button id="save-button" class="button button-primary">Save Settings</button>
-    </div>
-  </div>
+   
   
   <script src="options.js"></script>
 </body>

@@ -1,62 +1,36 @@
 document.addEventListener('DOMContentLoaded', function() {
-  // Set up tabs
-  setupTabs();
-  
-  // Load settings
-  loadSettings();
-  
-  // Load blocklist
-  loadBlocklist();
-  
-  // Set up event listeners
-  document.getElementById('save-button').addEventListener('click', saveSettings);
-  document.getElementById('reset-button').addEventListener('click', resetSettings);
-  document.getElementById('add-block-button').addEventListener('click', addBlockedUrl);
-  document.getElementById('clear-history').addEventListener('click', clearHistory);
-  
-  // Set up history filter buttons
-  document.getElementById('filter-all').addEventListener('click', () => filterHistory('all'));
-  document.getElementById('filter-blocked').addEventListener('click', () => filterHistory('blocked'));
-  document.getElementById('filter-allowed').addEventListener('click', () => filterHistory('allowed'));
-  
-  // Set up history search
-  document.getElementById('history-search').addEventListener('input', debounce(searchHistory, 300));
-  
-  // Set up server URL change listener
-  document.getElementById('server-url').addEventListener('change', function() {
-    // When server URL changes, reload the blocklist
-    loadBlocklist();
-  });
-});
-
-// Set up tabs
-function setupTabs() {
   const tabs = document.querySelectorAll('.tab');
   const tabContents = document.querySelectorAll('.tab-content');
-  
+
   tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      // Remove active class from all tabs and contents
+    tab.addEventListener('click', function() {
       tabs.forEach(t => t.classList.remove('active'));
-      tabContents.forEach(c => c.classList.remove('active'));
-      
-      // Add active class to clicked tab and corresponding content
-      tab.classList.add('active');
-      const tabId = tab.getAttribute('data-tab');
-      document.getElementById(tabId).classList.add('active');
-      
-      // If switching to blocklist tab, refresh the blocklist
-      if (tabId === 'blocklist') {
-        loadBlocklist();
-      }
-      
-      // If switching to history tab, load the history
-      if (tabId === 'history') {
+      tabContents.forEach(tc => tc.classList.remove('active'));
+
+      this.classList.add('active');
+      document.getElementById(this.dataset.tab).classList.add('active');
+
+      // Trigger fresh load from server when switching tabs
+      if (this.dataset.tab === 'history') {
         loadHistory();
+      } else if (this.dataset.tab === 'blocklist') {
+        loadBlocklist();
       }
     });
   });
-}
+
+  // Load initial data
+  loadHistory();
+  loadBlocklist();
+});
+
+// Set up event listeners
+
+document.getElementById('add-block-button').addEventListener('click', addBlockedUrl);
+
+
+
+// Set up history search
 
 // Get the server URL from settings
 function getServerUrl() {
@@ -124,91 +98,57 @@ async function loadBlocklist() {
   blocklistContainer.innerHTML = '<div class="loading">Loading blocklist...</div>';
   
   try {
-    const serverUrl = await getServerUrl();
-    const response = await fetch(`${serverUrl}/blocklist`);
+    const serverUrl = localStorage.getItem('serverUrl') || 'http://localhost:1978';
+    const response = await fetch(`${serverUrl}/api/blocklist`);
     
     if (!response.ok) {
-      throw new Error(`Server returned ${response.status}`);
+      throw new Error(`Server returned ${response.status}: ${response.statusText}`);
     }
     
-    const blocklist = await response.json();
+    let blocklist = await response.json();
     
-    // Store blocklist in window for other functions to use
-    window.currentBlocklist = blocklist;
+    // Sort blocklist by timestamp or reverse the order to show latest on top
+    blocklist = blocklist.reverse(); // Assuming entries are added sequentially
     
-    // Clear the container
-    blocklistContainer.innerHTML = '';
-    
-    if (blocklist.length === 0) {
-      blocklistContainer.innerHTML = '<div class="empty-message">No blocked URLs. Add one below.</div>';
+    if (!blocklist || blocklist.length === 0) {
+      blocklistContainer.innerHTML = '<div class="empty-message">No blocked URLs found.</div>';
       return;
     }
     
-    // Add a header row for the blocklist
-    if (blocklist.length > 0) {
-      const headerElement = document.createElement('div');
-      headerElement.className = 'blocklist-item';
-      headerElement.style.fontWeight = 'bold';
-      headerElement.style.backgroundColor = '#f8f9fa';
-      
-      const urlHeader = document.createElement('div');
-      urlHeader.className = 'blocklist-url';
-      urlHeader.textContent = 'URL';
-      
-      const reasonHeader = document.createElement('div');
-      reasonHeader.className = 'blocklist-reason';
-      reasonHeader.textContent = 'Reason';
-      
-      const actionsHeader = document.createElement('div');
-      actionsHeader.className = 'blocklist-actions';
-      actionsHeader.textContent = '';
-      
-      headerElement.appendChild(urlHeader);
-      headerElement.appendChild(reasonHeader);
-      headerElement.appendChild(actionsHeader);
-      
-      blocklistContainer.appendChild(headerElement);
-    }
-    
-    // For each item in the blocklist
-    blocklist.forEach(item => {
-      const itemElement = document.createElement('div');
-      itemElement.className = 'blocklist-item';
-      
-      const urlElement = document.createElement('div');
-      urlElement.className = 'blocklist-url';
-      urlElement.textContent = item.url;
-      urlElement.title = item.url; // Show full URL on hover
-      
-      const reasonElement = document.createElement('div');
-      reasonElement.className = 'blocklist-reason';
-      reasonElement.textContent = item.reason || 'No reason provided';
-      reasonElement.title = item.reason || 'No reason provided'; // Show full reason on hover
-      
-      const actionsElement = document.createElement('div');
-      actionsElement.className = 'blocklist-actions';
-      
-      const removeButton = document.createElement('button');
-      removeButton.className = 'blocklist-action delete';
-      removeButton.title = 'Remove from blocklist';
-      removeButton.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+    const blocklistHTML = blocklist.map((entry, index) => `
+      <div class="blocklist-item">
+        <div class="blocklist-url">${entry.url}</div>
+        <div class="blocklist-reason">${entry.reason || 'No reason provided'}</div>
+        <button class="delete-icon" title="Delete" data-index="${index}">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
           <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/>
         </svg>
-      `;
-      removeButton.addEventListener('click', () => removeBlockedUrl(item.url, itemElement));
-      
-      actionsElement.appendChild(removeButton);
-      
-      itemElement.appendChild(urlElement);
-      itemElement.appendChild(reasonElement);
-      itemElement.appendChild(actionsElement);
-      
-      blocklistContainer.appendChild(itemElement);
+    </button>
+      </div>
+    `).join('');
+    
+    blocklistContainer.innerHTML = blocklistHTML;
+    
+    // Add event listeners for delete buttons
+    document.querySelectorAll('.delete-icon').forEach(button => {
+      button.addEventListener('click', async (e) => {
+        const index = button.dataset.index;
+        try {
+          const deleteResponse = await fetch(`${serverUrl}/api/blocklist/${index}`, {
+            method: 'DELETE'
+          });
+          if (!deleteResponse.ok) {
+            throw new Error(`Failed to delete entry: ${deleteResponse.status}`);
+          }
+          loadBlocklist(); // Refresh the blocklist after deletion
+        } catch (error) {
+          console.error('Error deleting blocklist entry:', error);
+        }
+      });
     });
   } catch (error) {
     console.error('Error loading blocklist:', error);
-    blocklistContainer.innerHTML = `<div class="error-message">Error loading blocklist: ${error.message}</div>`;
+    blocklistContainer.innerHTML = `<div class="empty-message">Error loading blocklist: ${error.message}</div>`;
   }
 }
 
@@ -228,7 +168,7 @@ async function addBlockedUrl() {
   try {
     const serverUrl = await getServerUrl();
     
-    const response = await fetch(`${serverUrl}/blocklist`, {
+    const response = await fetch(`${serverUrl}/api/blocklist`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -275,7 +215,7 @@ async function removeBlockedUrl(url, itemElement) {
   try {
     const serverUrl = await getServerUrl();
     
-    const response = await fetch(`${serverUrl}/blocklist/${encodeURIComponent(url)}`, {
+    const response = await fetch(`${serverUrl}/api/blocklist/${encodeURIComponent(url)}`, {
       method: 'DELETE'
     });
     
@@ -323,15 +263,58 @@ async function loadHistory() {
   
   try {
     const serverUrl = localStorage.getItem('serverUrl') || 'http://localhost:1978';
-    const response = await fetch(`${serverUrl}/visits?days=30&limit=1000`);
     
+    // Fetch blocklist to determine blocked status
+    const blocklistResponse = await fetch(`${serverUrl}/api/blocklist`);
+    if (!blocklistResponse.ok) {
+      throw new Error(`Server returned ${blocklistResponse.status}: ${blocklistResponse.statusText}`);
+    }
+    const blocklist = await blocklistResponse.json();
+    const blockedUrls = new Set(blocklist.map(entry => entry.url));
+    
+    // Fetch history from API
+    const response = await fetch(`${serverUrl}/api/visits?days=30&limit=1000`);
     if (!response.ok) {
       throw new Error(`Server returned ${response.status}: ${response.statusText}`);
     }
+    const apiVisits = await response.json();
     
-    const visits = await response.json();
+    // Fetch history from Chrome
+    const chromeVisits = await new Promise((resolve, reject) => {
+      chrome.history.search({ text: '', maxResults: 1000, startTime: Date.now() - (30 * 24 * 60 * 60 * 1000) }, (historyItems) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve(historyItems.map(item => ({
+            url: item.url,
+            title: item.title,
+            timestamp: new Date(item.lastVisitTime).toISOString()
+          })));
+        }
+      });
+    });
     
-    if (!visits || visits.length === 0) {
+    // Combine and deduplicate visits
+    const allVisits = [...apiVisits, ...chromeVisits];
+    const uniqueVisitsMap = new Map();
+    
+    allVisits.forEach(visit => {
+      // Discard URLs starting with chrome-extension: and localhost:
+      if (visit.url.startsWith('chrome-extension:') || visit.url.startsWith('http://localhost:') || visit.url.startsWith('https://localhost:')) {
+        return;
+      }
+      
+      if (!uniqueVisitsMap.has(visit.url) || new Date(visit.timestamp) > new Date(uniqueVisitsMap.get(visit.url).timestamp)) {
+        uniqueVisitsMap.set(visit.url, visit);
+      }
+    });
+    
+    const uniqueVisits = Array.from(uniqueVisitsMap.values());
+    
+    // Sort visits by timestamp (newest first)
+    uniqueVisits.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    if (uniqueVisits.length === 0) {
       historyContainer.innerHTML = '<div class="empty-message">No browsing history found.</div>';
       return;
     }
@@ -339,7 +322,7 @@ async function loadHistory() {
     // Group visits by domain
     const domainMap = {};
     
-    visits.forEach(visit => {
+    uniqueVisits.forEach(visit => {
       try {
         const url = new URL(visit.url);
         const domain = url.hostname;
@@ -366,27 +349,29 @@ async function loadHistory() {
     const historyHTML = sortedDomains.map(domainGroup => {
       const { domain, visits, count } = domainGroup;
       
-      // Sort visits by timestamp (newest first)
-      const sortedVisits = visits.sort((a, b) => {
-        return new Date(b.timestamp) - new Date(a.timestamp);
-      });
-      
       // Create HTML for each visit
-      const visitsHTML = sortedVisits.map(visit => {
+      const visitsHTML = visits.map(visit => {
         const date = new Date(visit.timestamp);
         const formattedDate = date.toLocaleString();
+        const isBlocked = blockedUrls.has(visit.url);
         
         return `
-          <div class="history-item" data-url="${visit.url}">
+          <div class="history-item" data-url="${visit.url}" data-blocked="${isBlocked}">
             <div class="history-details">
               <div class="history-title">${visit.title || 'Untitled'}</div>
               <div class="history-url">${visit.url}</div>
               <div class="history-time">${formattedDate}</div>
             </div>
-            <button class="history-toggle allowed" title="Block this URL">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
+            <button class="history-toggle ${isBlocked ? 'blocked' : 'allowed'}" title="${isBlocked ? 'Unblock this URL' : 'Block this URL'}">
+              ${isBlocked ? `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/>
+                </svg>
+              ` : `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+              `}
             </button>
           </div>
         `;
@@ -419,37 +404,14 @@ async function loadHistory() {
         domain.classList.toggle('expanded');
       });
     });
-    
-    // Add event listeners for blocking/unblocking
-    document.querySelectorAll('.history-toggle').forEach(toggle => {
-      toggle.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const item = toggle.closest('.history-item');
-        const url = item.dataset.url;
-        
-        if (toggle.classList.contains('allowed')) {
-          // Block this URL
-          await blockUrl(url, 'Blocked from history');
-          toggle.classList.remove('allowed');
-          toggle.classList.add('blocked');
-          toggle.title = 'Unblock this URL';
-          toggle.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/>
-            </svg>
-          `;
-        } else {
-          // Unblock this URL
-          await unblockUrl(url);
-          toggle.classList.remove('blocked');
-          toggle.classList.add('allowed');
-          toggle.title = 'Block this URL';
-          toggle.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
-          `;
-        }
+
+    // Add event listeners for toggle buttons
+    document.querySelectorAll('.history-toggle').forEach(button => {
+      button.addEventListener('click', (event) => {
+        const itemElement = event.target.closest('.history-item');
+        const url = itemElement.getAttribute('data-url');
+        const currentlyBlocked = itemElement.getAttribute('data-blocked') === 'true';
+        toggleBlockedStatus(url, currentlyBlocked, itemElement);
       });
     });
     
@@ -469,7 +431,7 @@ async function toggleBlockedStatus(url, currentlyBlocked, itemElement) {
     try {
       const serverUrl = await getServerUrl();
       
-      const response = await fetch(`${serverUrl}/blocklist`, {
+      const response = await fetch(`${serverUrl}/api/blocklist`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -499,18 +461,13 @@ async function toggleBlockedStatus(url, currentlyBlocked, itemElement) {
     const newStatus = !currentlyBlocked;
     itemElement.setAttribute('data-blocked', newStatus ? 'true' : 'false');
     
-    const toggleButton = itemElement.querySelector('.toggle-button');
-    toggleButton.className = `toggle-button ${newStatus ? 'blocked' : 'allowed'}`;
-    toggleButton.title = newStatus ? 'Unblock this URL' : 'Block this URL';
-    
-    toggleButton.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20">
-        ${newStatus ? 
-          '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/>' : 
-          '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>'
-        }
-      </svg>
-    `;
+    const toggleButton = itemElement.querySelector('.history-toggle');
+    if (toggleButton) {
+      toggleButton.className = `history-toggle ${newStatus ? 'blocked' : 'allowed'}`;
+      toggleButton.title = newStatus ? 'Unblock this URL' : 'Block this URL';
+    } else {
+      console.error('Toggle button not found within itemElement:', itemElement);
+    }
   }
   
   // Reload the blocklist
@@ -732,4 +689,26 @@ function formatTimeSpent(seconds) {
   timeString += `${remainingSeconds}s`;
   
   return timeString;
+}
+
+// Function to delete a blocklist item by index
+function deleteBlocklistItem(index) {
+  fetch(`http://localhost:1978/api/blocklist/${index}`, {
+    method: 'DELETE'
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    console.log('Item deleted:', data);
+    // Refresh the blocklist display after deletion
+    loadBlocklist();
+  })
+  .catch(error => {
+    console.error('Error deleting blocklist item:', error);
+    alert('Failed to delete item. Please try again.');
+  });
 } 
