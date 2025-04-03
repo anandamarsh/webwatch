@@ -310,7 +310,7 @@ async function loadHistory() {
   
   try {
     const serverUrl = localStorage.getItem('serverUrl') || 'http://localhost:1978';
-    const response = await fetch(`${serverUrl}/visits?days=30&limit=1000`);
+    const response = await fetch(`${serverUrl}/api/visits?days=30&limit=1000`);
     
     if (!response.ok) {
       throw new Error(`Server returned ${response.status}: ${response.statusText}`);

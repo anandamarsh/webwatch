@@ -52,6 +52,40 @@ def test_delete_from_blocklist(index):
     
     return response.json()
 
+def test_get_visits():
+    """Test the GET /api/visits endpoint"""
+    print("Testing GET /api/visits...")
+    
+    response = requests.get(f"{BASE_URL}/visits")
+    
+    print(f"Status Code: {response.status_code}")
+    print("Response:")
+    print(json.dumps(response.json(), indent=2))
+    
+    return response.json()
+
+def test_add_visit(url, content, title, timestamp):
+    """Test the POST /api/visits endpoint"""
+    print(f"Testing POST /api/visits with URL: {url}")
+    
+    data = {
+        "url": url,
+        "content": content,
+        "title": title,
+        "timestamp": timestamp
+    }
+    
+    response = requests.post(
+        f"{BASE_URL}/visits",
+        json=data
+    )
+    
+    print(f"Status Code: {response.status_code}")
+    print("Response:")
+    print(json.dumps(response.json(), indent=2))
+    
+    return response.json()
+
 def run_all_tests():
     """Run all tests in sequence"""
     print_separator()
@@ -93,6 +127,21 @@ def run_all_tests():
         print("Test 7: Get final blocklist")
         test_get_blocklist()
         print_separator()
+    
+    # Test 8: Get initial visits
+    print("Test 8: Get initial visits")
+    initial_visits = test_get_visits()
+    print_separator()
+    
+    # Test 9: Add a visit
+    print("Test 9: Add a visit")
+    test_add_visit("https://example.com", "Example content", "Example Title", time.strftime("%Y-%m-%d %H:%M:%S"))
+    print_separator()
+    
+    # Test 10: Get updated visits
+    print("Test 10: Get updated visits")
+    test_get_visits()
+    print_separator()
     
     print("ALL TESTS COMPLETED")
 
