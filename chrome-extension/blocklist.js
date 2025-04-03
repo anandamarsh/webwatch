@@ -1,3 +1,6 @@
+// Store for the blocklist
+let blocklist = [];
+
 // Check if monitoring is enabled
 function isMonitoringEnabled() {
     return new Promise((resolve) => {
@@ -12,18 +15,10 @@ function isMonitoringEnabled() {
   // Fetch blocklist from server
   async function fetchBlocklist() {
     try {
-      // Get server URL from settings
-      const url = await new Promise((resolve) => {
-        chrome.storage.sync.get({
-          serverUrl: 'http://localhost:1978'
-        }, function(items) {
-          resolve(items.serverUrl);
-        });
-      });
+      const serverUrl = 'http://localhost:1978';
+      console.log('Fetching blocklist from:', serverUrl);
       
-      console.log('Fetching blocklist from:', url);
-      
-      const response = await fetch(`${url}/blocklist`);
+      const response = await fetch(`${serverUrl}/api/blocklist`);
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}`);
       }
@@ -39,9 +34,6 @@ function isMonitoringEnabled() {
   
   // Function to check if a URL is blocked
   async function isUrlBlocked(url) {
-    // Always fetch the latest blocklist
-    const blocklist = await fetchBlocklist();
-    
     // Create URL object for easier domain extraction
     let urlObj;
     try {

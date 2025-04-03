@@ -4,21 +4,21 @@
   "version": "1.0",
   "description": "Monitor and control your web browsing",
   "permissions": [
-  "storage",
-  "tabs",
-  "history",
-  "webNavigation",
-  "scripting"
-],
+    "storage",
+    "tabs",
+    "history",
+    "webNavigation",
+    "scripting"
+  ],
   "host_permissions": [
     "http://localhost:1978/*",
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "js/background.js"
+    "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "ui/popup/popup.html",
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -30,15 +30,14 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "options_page": "ui/options/options.html",
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["js/content.js"]
+      "js": ["content.js"]
     }
   ],
   "web_accessible_resources": [{
-    "resources": ["ui/blocked/blocked.html"],
+    "resources": ["blocked.html", "icons/icon128.png"],
     "matches": ["<all_urls>"]
   }]
 }
