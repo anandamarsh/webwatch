@@ -262,22 +262,49 @@ async function loadHistory() {
   try {
     const serverUrl = localStorage.getItem('serverUrl') || 'http://localhost:1978';
     
-    // Fetch blocklist
-    const blocklistResponse = await fetch(`${serverUrl}/api/blocklist`);
-    if (!blocklistResponse.ok) {
-      throw new Error(`Server returned ${blocklistResponse.status}: ${blocklistResponse.statusText}`);
-    }
-    const blocklist = await blocklistResponse.json();
-    const blockedUrls = new Set(blocklist.map(entry => entry.url));
-    
-    // Fetch visits
+    // Fetch history from API
     const response = await fetch(`${serverUrl}/api/visits?days=30&limit=1000`);
     if (!response.ok) {
       throw new Error(`Server returned ${response.status}: ${response.statusText}`);
     }
-    const visits = await response.json();
+    const apiVisits = await response.json();
     
-    if (!visits || visits.length === 0) {
+    // Fetch history from Chrome
+    const chromeVisits = await new Promise((resolve, reject) => {
+      chrome.history.search({ text: '', maxResults: 1000, startTime: Date.now() - (30 * 24 * 60 * 60 * 1000) }, (historyItems) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve(historyItems.map(item => ({
+            url: item.url,
+            title: item.title,
+            timestamp: new Date(item.lastVisitTime).toISOString()
+          })));
+        }
+      });
+    });
+    
+    // Combine and deduplicate visits
+    const allVisits = [...apiVisits, ...chromeVisits];
+    const uniqueVisitsMap = new Map();
+    
+    allVisits.forEach(visit => {
+      // Discard URLs starting with chrome-extension: and localhost:
+      if (visit.url.startsWith('chrome-extension:') || visit.url.startsWith('http://localhost:') || visit.url.startsWith('https://localhost:')) {
+        return;
+      }
+      
+      if (!uniqueVisitsMap.has(visit.url) || new Date(visit.timestamp) > new Date(uniqueVisitsMap.get(visit.url).timestamp)) {
+        uniqueVisitsMap.set(visit.url, visit);
+      }
+    });
+    
+    const uniqueVisits = Array.from(uniqueVisitsMap.values());
+    
+    // Sort visits by timestamp (newest first)
+    uniqueVisits.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    if (uniqueVisits.length === 0) {
       historyContainer.innerHTML = '<div class="empty-message">No browsing history found.</div>';
       return;
     }
@@ -285,7 +312,7 @@ async function loadHistory() {
     // Group visits by domain
     const domainMap = {};
     
-    visits.forEach(visit => {
+    uniqueVisits.forEach(visit => {
       try {
         const url = new URL(visit.url);
         const domain = url.hostname;
@@ -312,28 +339,10 @@ async function loadHistory() {
     const historyHTML = sortedDomains.map(domainGroup => {
       const { domain, visits, count } = domainGroup;
       
-      // Sort visits by timestamp (newest first)
-      const sortedVisits = visits.sort((a, b) => {
-        return new Date(b.timestamp) - new Date(a.timestamp);
-      });
-      
       // Create HTML for each visit
-      const visitsHTML = sortedVisits.map(visit => {
+      const visitsHTML = visits.map(visit => {
         const date = new Date(visit.timestamp);
         const formattedDate = date.toLocaleString();
-        
-        const isBlocked = blockedUrls.has(visit.url);
-        const toggleClass = isBlocked ? 'blocked' : 'allowed';
-        const toggleTitle = isBlocked ? 'Unblock this URL' : 'Block this URL';
-        const toggleIcon = isBlocked ? `
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/>
-          </svg>
-        ` : `
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-          </svg>
-        `;
         
         return `
           <div class="history-item" data-url="${visit.url}">
@@ -342,8 +351,10 @@ async function loadHistory() {
               <div class="history-url">${visit.url}</div>
               <div class="history-time">${formattedDate}</div>
             </div>
-            <button class="history-toggle ${toggleClass}" title="${toggleTitle}">
-              ${toggleIcon}
+            <button class="history-toggle allowed" title="Block this URL">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
             </button>
           </div>
         `;
@@ -374,52 +385,6 @@ async function loadHistory() {
       header.addEventListener('click', () => {
         const domain = header.closest('.history-domain');
         domain.classList.toggle('expanded');
-      });
-    });
-    
-    function blockUrl(url, reason = 'Blocked from history') {
-      const data = { url, reason };
-    
-      fetch('http://localhost:1978/api/blocklist', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Server returned ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log('URL successfully blocked:', data);
-      })
-      .catch(error => {
-        console.error('Error blocking URL:', error);
-      });
-    }
-    
-    // Add event listeners for blocking/unblocking
-    document.querySelectorAll('.history-toggle').forEach(toggle => {
-      toggle.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const item = toggle.closest('.history-item');
-        const url = item.dataset.url;
-        
-        if (toggle.classList.contains('allowed')) {
-          // Block this URL
-          await blockUrl(url, 'Blocked from history');
-          toggle.classList.remove('allowed');
-          toggle.classList.add('blocked');
-          toggle.title = 'Unblock this URL';
-          toggle.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/>
-            </svg>
-          `;
-        } 
       });
     });
     
