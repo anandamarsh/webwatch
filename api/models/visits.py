@@ -17,6 +17,11 @@ CREATE TABLE visits (
 conn.commit()
 
 def get_visits():
+    cursor.execute('SELECT id, url, title, timestamp FROM visits')
+    rows = cursor.fetchall()
+    return [{'id': row[0], 'url': row[1], 'title': row[2], 'timestamp': row[3]} for row in rows]
+
+def get_visits_for_report():
     cursor.execute('SELECT * FROM visits')
     rows = cursor.fetchall()
     return [{'id': row[0], 'url': row[1], 'content': row[2], 'title': row[3], 'timestamp': row[4]} for row in rows]

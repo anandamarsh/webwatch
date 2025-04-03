@@ -86,6 +86,18 @@ def test_add_visit(url, content, title, timestamp):
     
     return response.json()
 
+def test_get_report():
+    """Test the GET /api/report endpoint"""
+    print("Testing GET /api/report...")
+    
+    response = requests.get(f"{BASE_URL}/report")
+    
+    print(f"Status Code: {response.status_code}")
+    print("Response:")
+    print(json.dumps(response.json(), indent=2))
+    
+    return response.json()
+
 def run_all_tests():
     """Run all tests in sequence"""
     print_separator()
@@ -141,6 +153,11 @@ def run_all_tests():
     # Test 10: Get updated visits
     print("Test 10: Get updated visits")
     test_get_visits()
+    print_separator()
+    
+    # Test 11: Get report
+    print("Test 11: Get report")
+    test_get_report()
     print_separator()
     
     print("ALL TESTS COMPLETED")

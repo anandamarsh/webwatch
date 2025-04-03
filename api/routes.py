@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from models.blocklist import get_blocklist, add_to_blocklist, remove_from_blocklist
-from models.visits import get_visits, add_visit
+from models.visits import get_visits, get_visits_for_report, add_visit
 
 # Create blueprint with url_prefix
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -80,3 +80,17 @@ def add_visit_route():
         return jsonify({"success": True, "message": "Visit added", "visit": visit}), 201
     except Exception as e:
         return jsonify({"error": f"Failed to add visit: {str(e)}"}), 500
+
+# Report route
+@api_bp.route('/report', methods=['GET'])
+def report_route():
+    try:
+        blocklist = get_blocklist()
+        visits = get_visits_for_report()
+        report = {
+            "blocklist": blocklist,
+            "visits": visits
+        }
+        return jsonify(report)
+    except Exception as e:
+        return jsonify({"error": f"Failed to generate report: {str(e)}"}), 500
