@@ -9,6 +9,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
       this.classList.add('active');
       document.getElementById(this.dataset.tab).classList.add('active');
+
+      // Trigger fresh load from server when switching tabs
+      if (this.dataset.tab === 'history') {
+        loadHistory();
+      } else if (this.dataset.tab === 'blocklist') {
+        loadBlocklist();
+      }
     });
   });
 
@@ -17,33 +24,13 @@ document.addEventListener('DOMContentLoaded', function() {
   loadBlocklist();
 });
 
-function loadHistory() {
-  // Implement history loading logic
-}
-
-function loadBlocklist() {
-  // Implement blocklist loading logic
-}
-
 // Set up event listeners
-document.getElementById('save-button').addEventListener('click', saveSettings);
-document.getElementById('reset-button').addEventListener('click', resetSettings);
-document.getElementById('add-block-button').addEventListener('click', addBlockedUrl);
-document.getElementById('clear-history').addEventListener('click', clearHistory);
 
-// Set up history filter buttons
-document.getElementById('filter-all').addEventListener('click', () => filterHistory('all'));
-document.getElementById('filter-blocked').addEventListener('click', () => filterHistory('blocked'));
-document.getElementById('filter-allowed').addEventListener('click', () => filterHistory('allowed'));
+document.getElementById('add-block-button').addEventListener('click', addBlockedUrl);
+
+
 
 // Set up history search
-document.getElementById('history-search').addEventListener('input', debounce(searchHistory, 300));
-
-// Set up server URL change listener
-document.getElementById('server-url').addEventListener('change', function() {
-  // When server URL changes, reload the blocklist
-  loadBlocklist();
-});
 
 // Get the server URL from settings
 function getServerUrl() {
@@ -111,91 +98,55 @@ async function loadBlocklist() {
   blocklistContainer.innerHTML = '<div class="loading">Loading blocklist...</div>';
   
   try {
-    const serverUrl = await getServerUrl();
+    const serverUrl = localStorage.getItem('serverUrl') || 'http://localhost:1978';
     const response = await fetch(`${serverUrl}/api/blocklist`);
     
     if (!response.ok) {
-      throw new Error(`Server returned ${response.status}`);
+      throw new Error(`Server returned ${response.status}: ${response.statusText}`);
     }
     
     const blocklist = await response.json();
     
-    // Store blocklist in window for other functions to use
-    window.currentBlocklist = blocklist;
-    
-    // Clear the container
-    blocklistContainer.innerHTML = '';
-    
-    if (blocklist.length === 0) {
-      blocklistContainer.innerHTML = '<div class="empty-message">No blocked URLs. Add one below.</div>';
+    if (!blocklist || blocklist.length === 0) {
+      blocklistContainer.innerHTML = '<div class="empty-message">No blocked URLs found.</div>';
       return;
     }
     
-    // Add a header row for the blocklist
-    if (blocklist.length > 0) {
-      const headerElement = document.createElement('div');
-      headerElement.className = 'blocklist-item';
-      headerElement.style.fontWeight = 'bold';
-      headerElement.style.backgroundColor = '#f8f9fa';
-      
-      const urlHeader = document.createElement('div');
-      urlHeader.className = 'blocklist-url';
-      urlHeader.textContent = 'URL';
-      
-      const reasonHeader = document.createElement('div');
-      reasonHeader.className = 'blocklist-reason';
-      reasonHeader.textContent = 'Reason';
-      
-      const actionsHeader = document.createElement('div');
-      actionsHeader.className = 'blocklist-actions';
-      actionsHeader.textContent = '';
-      
-      headerElement.appendChild(urlHeader);
-      headerElement.appendChild(reasonHeader);
-      headerElement.appendChild(actionsHeader);
-      
-      blocklistContainer.appendChild(headerElement);
-    }
-    
-    // For each item in the blocklist
-    blocklist.forEach((item, index) => {
-      const itemElement = document.createElement('div');
-      itemElement.className = 'blocklist-item';
-      
-      const urlElement = document.createElement('div');
-      urlElement.className = 'blocklist-url';
-      urlElement.textContent = item.url;
-      urlElement.title = item.url; // Show full URL on hover
-      
-      const reasonElement = document.createElement('div');
-      reasonElement.className = 'blocklist-reason';
-      reasonElement.textContent = item.reason || 'No reason provided';
-      reasonElement.title = item.reason || 'No reason provided'; // Show full reason on hover
-      
-      const actionsElement = document.createElement('div');
-      actionsElement.className = 'blocklist-actions';
-      
-      const removeButton = document.createElement('button');
-      removeButton.className = 'blocklist-action delete';
-      removeButton.title = 'Remove from blocklist';
-      removeButton.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+    const blocklistHTML = blocklist.map((entry, index) => `
+  <div class="blocklist-item">
+    <div class="blocklist-url">${entry.url}</div>
+    <div class="blocklist-reason">${entry.reason || 'No reason provided'}</div>
+    <button class="delete-icon" title="Delete" data-index="${index}">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
           <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/>
         </svg>
-      `;
-      removeButton.addEventListener('click', () => deleteBlocklistItem(index));
-      
-      actionsElement.appendChild(removeButton);
-      
-      itemElement.appendChild(urlElement);
-      itemElement.appendChild(reasonElement);
-      itemElement.appendChild(actionsElement);
-      
-      blocklistContainer.appendChild(itemElement);
+    </button>
+  </div>
+`).join('');
+
+    
+    blocklistContainer.innerHTML = blocklistHTML;
+    
+    // Add event listeners for delete buttons
+    document.querySelectorAll('.delete-icon').forEach(button => {
+      button.addEventListener('click', async (e) => {
+        const index = button.dataset.index;
+        try {
+          const deleteResponse = await fetch(`${serverUrl}/api/blocklist/${index}`, {
+            method: 'DELETE'
+          });
+          if (!deleteResponse.ok) {
+            throw new Error(`Failed to delete entry: ${deleteResponse.status}`);
+          }
+          loadBlocklist(); // Refresh the blocklist after deletion
+        } catch (error) {
+          console.error('Error deleting blocklist entry:', error);
+        }
+      });
     });
   } catch (error) {
     console.error('Error loading blocklist:', error);
-    blocklistContainer.innerHTML = `<div class="error-message">Error loading blocklist: ${error.message}</div>`;
+    blocklistContainer.innerHTML = `<div class="empty-message">Error loading blocklist: ${error.message}</div>`;
   }
 }
 
@@ -310,12 +261,20 @@ async function loadHistory() {
   
   try {
     const serverUrl = localStorage.getItem('serverUrl') || 'http://localhost:1978';
-    const response = await fetch(`${serverUrl}/api/visits?days=30&limit=1000`);
     
+    // Fetch blocklist
+    const blocklistResponse = await fetch(`${serverUrl}/api/blocklist`);
+    if (!blocklistResponse.ok) {
+      throw new Error(`Server returned ${blocklistResponse.status}: ${blocklistResponse.statusText}`);
+    }
+    const blocklist = await blocklistResponse.json();
+    const blockedUrls = new Set(blocklist.map(entry => entry.url));
+    
+    // Fetch visits
+    const response = await fetch(`${serverUrl}/api/visits?days=30&limit=1000`);
     if (!response.ok) {
       throw new Error(`Server returned ${response.status}: ${response.statusText}`);
     }
-    
     const visits = await response.json();
     
     if (!visits || visits.length === 0) {
@@ -363,6 +322,19 @@ async function loadHistory() {
         const date = new Date(visit.timestamp);
         const formattedDate = date.toLocaleString();
         
+        const isBlocked = blockedUrls.has(visit.url);
+        const toggleClass = isBlocked ? 'blocked' : 'allowed';
+        const toggleTitle = isBlocked ? 'Unblock this URL' : 'Block this URL';
+        const toggleIcon = isBlocked ? `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/>
+          </svg>
+        ` : `
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+        `;
+        
         return `
           <div class="history-item" data-url="${visit.url}">
             <div class="history-details">
@@ -370,10 +342,8 @@ async function loadHistory() {
               <div class="history-url">${visit.url}</div>
               <div class="history-time">${formattedDate}</div>
             </div>
-            <button class="history-toggle allowed" title="Block this URL">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
+            <button class="history-toggle ${toggleClass}" title="${toggleTitle}">
+              ${toggleIcon}
             </button>
           </div>
         `;
@@ -407,6 +377,30 @@ async function loadHistory() {
       });
     });
     
+    function blockUrl(url, reason = 'Blocked from history') {
+      const data = { url, reason };
+    
+      fetch('http://localhost:1978/api/blocklist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Server returned ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('URL successfully blocked:', data);
+      })
+      .catch(error => {
+        console.error('Error blocking URL:', error);
+      });
+    }
+    
     // Add event listeners for blocking/unblocking
     document.querySelectorAll('.history-toggle').forEach(toggle => {
       toggle.addEventListener('click', async (e) => {
@@ -425,18 +419,7 @@ async function loadHistory() {
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/>
             </svg>
           `;
-        } else {
-          // Unblock this URL
-          await unblockUrl(url);
-          toggle.classList.remove('blocked');
-          toggle.classList.add('allowed');
-          toggle.title = 'Block this URL';
-          toggle.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
-          `;
-        }
+        } 
       });
     });
     
@@ -491,7 +474,7 @@ async function toggleBlockedStatus(url, currentlyBlocked, itemElement) {
     toggleButton.title = newStatus ? 'Unblock this URL' : 'Block this URL';
     
     toggleButton.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
         ${newStatus ? 
           '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/>' : 
           '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>'

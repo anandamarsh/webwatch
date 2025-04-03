@@ -343,6 +343,17 @@ body {
   color: #333;
 }
 
+.delete-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.delete-icon:hover {
+  opacity: 1;
+}
+
 .container {
   max-width: 800px;
   margin: 0 auto;
