@@ -105,7 +105,10 @@ async function loadBlocklist() {
       throw new Error(`Server returned ${response.status}: ${response.statusText}`);
     }
     
-    const blocklist = await response.json();
+    let blocklist = await response.json();
+    
+    // Sort blocklist by timestamp or reverse the order to show latest on top
+    blocklist = blocklist.reverse(); // Assuming entries are added sequentially
     
     if (!blocklist || blocklist.length === 0) {
       blocklistContainer.innerHTML = '<div class="empty-message">No blocked URLs found.</div>';
@@ -113,17 +116,16 @@ async function loadBlocklist() {
     }
     
     const blocklistHTML = blocklist.map((entry, index) => `
-  <div class="blocklist-item">
-    <div class="blocklist-url">${entry.url}</div>
-    <div class="blocklist-reason">${entry.reason || 'No reason provided'}</div>
-    <button class="delete-icon" title="Delete" data-index="${index}">
+      <div class="blocklist-item">
+        <div class="blocklist-url">${entry.url}</div>
+        <div class="blocklist-reason">${entry.reason || 'No reason provided'}</div>
+        <button class="delete-icon" title="Delete" data-index="${index}">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
           <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" fill="currentColor"/>
         </svg>
     </button>
-  </div>
-`).join('');
-
+      </div>
+    `).join('');
     
     blocklistContainer.innerHTML = blocklistHTML;
     
@@ -262,6 +264,14 @@ async function loadHistory() {
   try {
     const serverUrl = localStorage.getItem('serverUrl') || 'http://localhost:1978';
     
+    // Fetch blocklist to determine blocked status
+    const blocklistResponse = await fetch(`${serverUrl}/api/blocklist`);
+    if (!blocklistResponse.ok) {
+      throw new Error(`Server returned ${blocklistResponse.status}: ${blocklistResponse.statusText}`);
+    }
+    const blocklist = await blocklistResponse.json();
+    const blockedUrls = new Set(blocklist.map(entry => entry.url));
+    
     // Fetch history from API
     const response = await fetch(`${serverUrl}/api/visits?days=30&limit=1000`);
     if (!response.ok) {
@@ -343,18 +353,25 @@ async function loadHistory() {
       const visitsHTML = visits.map(visit => {
         const date = new Date(visit.timestamp);
         const formattedDate = date.toLocaleString();
+        const isBlocked = blockedUrls.has(visit.url);
         
         return `
-          <div class="history-item" data-url="${visit.url}">
+          <div class="history-item" data-url="${visit.url}" data-blocked="${isBlocked}">
             <div class="history-details">
               <div class="history-title">${visit.title || 'Untitled'}</div>
               <div class="history-url">${visit.url}</div>
               <div class="history-time">${formattedDate}</div>
             </div>
-            <button class="history-toggle allowed" title="Block this URL">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
+            <button class="history-toggle ${isBlocked ? 'blocked' : 'allowed'}" title="${isBlocked ? 'Unblock this URL' : 'Block this URL'}">
+              ${isBlocked ? `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/>
+                </svg>
+              ` : `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+              `}
             </button>
           </div>
         `;
@@ -385,6 +402,16 @@ async function loadHistory() {
       header.addEventListener('click', () => {
         const domain = header.closest('.history-domain');
         domain.classList.toggle('expanded');
+      });
+    });
+
+    // Add event listeners for toggle buttons
+    document.querySelectorAll('.history-toggle').forEach(button => {
+      button.addEventListener('click', (event) => {
+        const itemElement = event.target.closest('.history-item');
+        const url = itemElement.getAttribute('data-url');
+        const currentlyBlocked = itemElement.getAttribute('data-blocked') === 'true';
+        toggleBlockedStatus(url, currentlyBlocked, itemElement);
       });
     });
     
@@ -434,18 +461,13 @@ async function toggleBlockedStatus(url, currentlyBlocked, itemElement) {
     const newStatus = !currentlyBlocked;
     itemElement.setAttribute('data-blocked', newStatus ? 'true' : 'false');
     
-    const toggleButton = itemElement.querySelector('.toggle-button');
-    toggleButton.className = `toggle-button ${newStatus ? 'blocked' : 'allowed'}`;
-    toggleButton.title = newStatus ? 'Unblock this URL' : 'Block this URL';
-    
-    toggleButton.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-        ${newStatus ? 
-          '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8 0-1.85.63-3.55 1.69-4.9L16.9 18.31C15.55 19.37 13.85 20 12 20zm6.31-3.1L7.1 5.69C8.45 4.63 10.15 4 12 4c4.42 0 8 3.58 8 8 0 1.85-.63 3.55-1.69 4.9z"/>' : 
-          '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>'
-        }
-      </svg>
-    `;
+    const toggleButton = itemElement.querySelector('.history-toggle');
+    if (toggleButton) {
+      toggleButton.className = `history-toggle ${newStatus ? 'blocked' : 'allowed'}`;
+      toggleButton.title = newStatus ? 'Unblock this URL' : 'Block this URL';
+    } else {
+      console.error('Toggle button not found within itemElement:', itemElement);
+    }
   }
   
   // Reload the blocklist
