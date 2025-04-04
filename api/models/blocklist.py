@@ -9,7 +9,7 @@ os.makedirs(DATA_DIR, exist_ok=True)
 BLOCKLIST_FILE = os.path.join(DATA_DIR, 'blocklist.json')
 
 # Assuming you have a connection to your database
-conn = sqlite3.connect('visits.db', check_same_thread=False)
+conn = sqlite3.connect('data/visits.db', check_same_thread=False)
 cursor = conn.cursor()
 
 def get_blocklist():

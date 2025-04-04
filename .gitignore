@@ -8,9 +8,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-api/data/blocklist.json
-
 .DS_Store
-webwatch_persist.db
-webwatch.db
-api/visits.db
+api/data/visits.db
+api/data/blocklist.json

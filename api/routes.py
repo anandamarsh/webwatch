@@ -80,16 +80,24 @@ def add_visit_route():
         if not data:
             return jsonify({"error": "No data provided"}), 400
         
+        # Check for required fields, including 'content'
         required_fields = ['url', 'content', 'title', 'timestamp']
         if not all(field in data for field in required_fields):
             return jsonify({"error": "Missing required fields"}), 400
         
-        visit = add_visit(
-            url=data['url'],
-            content=data['content'],
-            title=data['title'],
-            timestamp=data['timestamp']
-        )
+        # Extract fields, ignoring 'content' for storage
+        url = data['url']
+        report = data.get('report', 'No report provided')  # Use 'report' if provided
+        title = data['title']
+        timestamp = data['timestamp']
+        
+        # 'content' is required but not stored
+        content = data['content']  # Ensure 'content' is present
+        
+        visit = add_visit(url, report, title, timestamp)
+        
+        if 'error' in visit:
+            return jsonify({"error": visit['error']}), 200
         
         return jsonify({"success": True, "message": "Visit added", "visit": visit}), 201
     except Exception as e:
