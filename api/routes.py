@@ -1,9 +1,30 @@
 from flask import Blueprint, jsonify, request
 from models.blocklist import get_blocklist, add_to_blocklist, remove_from_blocklist, clear_blocklist
-from models.visits import get_visits, get_visits_for_report, add_visit, clear_visits
+from models.visits import get_visits, get_visits_for_report, add_visit, clear_visits, get_visit_by_url
+from openai_utils import get_rating_and_report_from_file
+import os
+import re
+import urllib.parse
 
 # Create blueprint with url_prefix
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+# Ensure the 'webpages' directory exists
+os.makedirs('webpages', exist_ok=True)
+
+def save_html_content_to_file(url, content):
+    # Sanitize the URL to create a valid filename
+    sanitized_url = re.sub(r'[^a-zA-Z0-9]', '_', url[:100])
+    filename = f"webpages/{sanitized_url}.html"
+    
+    # Decode the content if necessary
+    decoded_content = urllib.parse.unquote(content)
+    
+    # Save the content to a file
+    with open(filename, 'w', encoding='utf-8') as file:
+        file.write(decoded_content)
+    
+    return filename
 
 # Main route
 @api_bp.route('/')
@@ -80,23 +101,32 @@ def add_visit_route():
         if not data:
             return jsonify({"error": "No data provided"}), 400
         
-        # Check for required fields, including 'content'
         required_fields = ['url', 'content', 'title', 'timestamp']
         if not all(field in data for field in required_fields):
             return jsonify({"error": "Missing required fields"}), 400
         
-        # Extract fields, ignoring 'content' for storage
         url = data['url']
-        report = data.get('report', 'No report provided')  # Use 'report' if provided
+        content = data['content']
         title = data['title']
         timestamp = data['timestamp']
         
-        visit = add_visit(url, report, title, timestamp)
+        existing_visit = get_visit_by_url(url)
+        if existing_visit:
+            return jsonify({"success": True, "message": "Visit already exists", "visit": existing_visit}), 200
         
-        if 'error' in visit:
-            return jsonify({"error": visit['error']}), 200
+        # Save the HTML content to a file
+        file_path = save_html_content_to_file(url, content)
         
-        return jsonify({"success": True, "message": "Visit added", "visit": visit}), 201
+        # Call the OpenAI Assistant with the file
+        ai_result = get_rating_and_report_from_file(file_path)
+        if ai_result:
+            rating = ai_result.get('rating', -1)
+            report = ai_result.get('report', 'No report provided')
+            
+            visit = add_visit(url, report, title, timestamp, rating)
+            return jsonify({"success": True, "message": "Visit added", "visit": visit}), 201
+        else:
+            return jsonify({"error": "Failed to get AI results"}), 500
     except Exception as e:
         return jsonify({"error": f"Failed to add visit: {str(e)}"}), 500
 
