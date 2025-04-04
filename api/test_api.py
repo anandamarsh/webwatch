@@ -91,6 +91,7 @@ def test_add_visit(url, report, title, timestamp):
     
     data = {
         "url": url,
+        "content": "<html>Example Content</html>",  # Required but ignored
         "report": report,
         "title": title,
         "timestamp": timestamp
@@ -102,8 +103,52 @@ def test_add_visit(url, report, title, timestamp):
         print(f"Status Code: {response.status_code}")
         print("Response:")
         print(json.dumps(response.json(), indent=2))
+        
+        # Check if the response contains the expected fields
+        visit_data = response.json().get('visit', {})
+        assert visit_data.get('url') == url
+        assert visit_data.get('report') == report
+        assert visit_data.get('rating') == -1  # Ensure rating is initialized to -1
+        
         log_test_result(test_name, True)
     except Exception as e:
+        log_test_result(test_name, False, str(e))
+
+def test_add_existing_visit(url, report, title, timestamp):
+    """Test adding an existing visit returns the existing entry"""
+    test_name = f"POST /api/visits with existing URL: {url}"
+    print(f"Testing {test_name}...")
+    
+    data = {
+        "url": url,
+        "content": "<html>Example Content</html>",  # Required but ignored
+        "report": report,
+        "title": title,
+        "timestamp": timestamp
+    }
+    
+    try:
+        response = requests.post(f"{BASE_URL}/visits", json=data)
+        response.raise_for_status()
+        print(f"Status Code: {response.status_code}")
+        print("Response:")
+        print(json.dumps(response.json(), indent=2))
+        
+        # Access the 'visit' key in the response
+        response_data = response.json()
+        visit_data = response_data.get('visit', {})
+        
+        # Check if the response contains the expected fields for the existing entry
+        assert visit_data['url'] == url, "URL mismatch"
+        
+        log_test_result(test_name, True)
+    except Exception as e:
+        # Print the response JSON for debugging
+        try:
+            print("Response JSON:", json.dumps(response.json(), indent=2))
+        except Exception as json_error:
+            print("Failed to parse JSON response:", str(json_error))
+        
         log_test_result(test_name, False, str(e))
 
 def test_get_report():
@@ -165,11 +210,15 @@ def run_all_tests():
     test_add_visit("https://example.com", "Example report", "Example Title", time.strftime("%Y-%m-%d %H:%M:%S"))
     print_separator()
     
-    # Test 10: Get updated visits
+    # Test 10: Add an existing visit
+    test_add_existing_visit("https://example.com", "New report", "New Title", time.strftime("%Y-%m-%d %H:%M:%S"))
+    print_separator()
+    
+    # Test 11: Get updated visits
     test_get_visits()
     print_separator()
     
-    # Test 11: Get report
+    # Test 12: Get report
     test_get_report()
     print_separator()
     

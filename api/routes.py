@@ -91,9 +91,6 @@ def add_visit_route():
         title = data['title']
         timestamp = data['timestamp']
         
-        # 'content' is required but not stored
-        content = data['content']  # Ensure 'content' is present
-        
         visit = add_visit(url, report, title, timestamp)
         
         if 'error' in visit:
